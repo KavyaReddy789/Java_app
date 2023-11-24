@@ -1,0 +1,45 @@
+@Library('my-shared-library') _
+
+pipeline{
+    agent any
+
+    parameters{
+        choice(name: 'action', choices: 'create\ndelete', description: 'Choose create/Destroy')
+    }
+    
+    options{
+        timeout(time: 2, unit: 'HOURS')
+        disableConcurrentBuilds()
+        timestamps()
+    }
+    stages{
+        stage('Git Checkout'){
+            when { expression {  params.action == 'create' } }
+            steps{
+            gitCheckout(
+                branch: "main",
+                url: "https://github.com/KavyaReddy789/Java_app.git"
+            )
+            }
+        }
+        stage('Maven Build : maven'){
+         when { expression {  params.action == 'create' } }
+            steps{
+               script{
+                   mvnBuild()
+               }
+            }
+        }
+         stage('Image push to Jfrog  through Automation'){
+         when { expression {  params.action == 'create' } }
+            steps{
+               script{            
+                    sh """
+                    cd target
+                    curl -X PUT -T kubernetes-configmap-reload-0.0.1-SNAPSHOT.jar http://admin:password@5.34.67.52:8082/artifactory/example-local-repo/
+                   """
+            }
+            }
+        }   
+    }
+}
